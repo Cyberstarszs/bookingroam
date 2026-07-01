@@ -1,0 +1,1125 @@
+================================================================================
+       SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+            SISTEM RESERVASI RUANGAN
+       (Proyek UAS Mata Kuliah Pemrograman Web)
+================================================================================
+
+Dokumen        : Software Requirements Specification (SRS)
+Nama Sistem    : Sistem Reservasi Ruangan
+Versi          : 1.0 (Versi UAS - Disederhanakan)
+Tanggal        : 2024
+Status         : Draft
+Mata Kuliah    : Pemrograman Web
+Jenis Tugas    : Proyek Kelompok UAS (Bobot 40% Nilai Akhir)
+Jumlah Anggota : 2 orang
+Stack Teknologi: Svelte (Frontend) + Express.js (Backend) + MariaDB + Drizzle ORM
+
+================================================================================
+CATATAN PENYESUAIAN DOKUMEN
+================================================================================
+
+Dokumen SRS ini telah disesuaikan dari versi lengkap (enterprise-grade) menjadi
+versi yang realistis untuk dikerjakan oleh 2 orang dalam waktu terbatas (proyek
+UAS), dengan tetap memenuhi seluruh materi yang wajib dibuktikan sesuai panduan
+UAS Pemrograman Web. Penyesuaian yang dilakukan:
+
+  1. Peran pengguna disederhanakan menjadi 2 peran saja: ADMIN dan USER
+     (peran "Staff" pada versi lengkap dihapus untuk versi UAS ini)
+  2. Fitur-fitur berlabel [OPSIONAL] pada versi lengkap sebagian besar TIDAK
+     dikerjakan, kecuali jika waktu memungkinkan
+  3. Tidak ada integrasi pihak ketiga yang rumit (SSO, WhatsApp Gateway, OTP SMS)
+  4. JWT disimpan di Authorization Header (Bearer Token), bukan HTTP-only Cookie
+  5. Notifikasi disederhanakan menjadi notifikasi IN-APP saja (tanpa email SMTP),
+     untuk memangkas kompleksitas infrastruktur yang tidak relevan dengan
+     penilaian UAS
+  6. Struktur backend WAJIB mengikuti arsitektur Router - Controller - Model/
+     Service sesuai tuntutan rubrik penilaian
+  7. Setiap modul fungsional dipetakan secara eksplisit ke materi kuliah
+     (lihat Bab 3.0 - Pemetaan Modul ke Materi Kuliah)
+
+Dokumen ini dirancang agar 2 anggota kelompok dapat membagi tugas secara adil
+dan jelas, sesuai tuntutan penilaian "Kontribusi Git & Kolaborasi" (10%).
+
+================================================================================
+DAFTAR ISI
+================================================================================
+
+1.  PENDAHULUAN
+    1.1  Tujuan Dokumen
+    1.2  Ruang Lingkup Proyek
+    1.3  Definisi, Akronim, dan Singkatan
+    1.4  Gambaran Umum Dokumen
+
+2.  DESKRIPSI UMUM SISTEM
+    2.1  Perspektif Produk
+    2.2  Fungsi Utama Produk
+    2.3  Karakteristik Pengguna (2 Peran)
+    2.4  Asumsi dan Batasan Proyek
+
+3.  PEMETAAN MODUL KE MATERI KULIAH (WAJIB DIPENUHI)
+    3.1  Tabel Pemetaan Lengkap
+
+4.  PEMBAGIAN TUGAS ANTAR ANGGOTA (2 ORANG)
+    4.1  Skema Pembagian Tugas
+    4.2  Rencana Commit Git
+
+5.  KEBUTUHAN FUNGSIONAL
+    5.1  Modul Autentikasi & Otorisasi
+    5.2  Modul Dashboard
+    5.3  Modul Manajemen Ruangan
+    5.4  Modul Reservasi
+    5.5  Modul Notifikasi (In-App)
+    5.6  Modul Manajemen Pengguna
+
+6.  KEBUTUHAN NON-FUNGSIONAL
+
+7.  ARSITEKTUR SISTEM
+    7.1  Arsitektur Umum
+    7.2  Struktur Folder Backend (Express.js)
+    7.3  Struktur Folder Frontend (Svelte)
+    7.4  Alur Autentikasi JWT (Bearer Token)
+    7.5  Penanganan CORS
+
+8.  MODEL DATA (DATABASE)
+    8.1  Entity Relationship Diagram (ERD - Teks)
+    8.2  Skema Tabel Lengkap (untuk Drizzle ORM)
+
+9.  DOKUMENTASI API ENDPOINT
+    9.1  Endpoint Autentikasi
+    9.2  Endpoint Ruangan
+    9.3  Endpoint Reservasi
+    9.4  Endpoint Pengguna
+    9.5  Endpoint Notifikasi
+    9.6  Format Respons Standar & Error Handling
+
+10. KEBUTUHAN ANTARMUKA (UI/UX)
+    10.1 Daftar Halaman & Komponen Svelte
+    10.2 Ketentuan Responsif (Flexbox & Grid)
+    10.3 Ketentuan Animasi/Transisi CSS
+
+11. ATURAN BISNIS
+
+12. MATRIKS HAK AKSES
+
+13. SKENARIO PENGGUNAAN (USE CASE)
+
+14. RENCANA ANTISIPASI LIVE MODIFICATION
+    14.1 Contoh Skenario Modifikasi Frontend
+    14.2 Contoh Skenario Modifikasi Backend
+    14.3 Checklist Pemahaman Kode Sebelum Sidang
+
+15. CHECKLIST KELENGKAPAN PENGUMPULAN UAS
+
+16. RIWAYAT DOKUMEN
+
+================================================================================
+BAB 1 — PENDAHULUAN
+================================================================================
+
+1.1 TUJUAN DOKUMEN
+--------------------------------------------------------------------------------
+Dokumen ini menjelaskan kebutuhan fungsional dan non-fungsional dari Sistem
+Reservasi Ruangan yang dikembangkan sebagai proyek UAS mata kuliah Pemrograman
+Web. Dokumen ini berfungsi sebagai:
+
+  - Acuan teknis pengembangan untuk 2 anggota kelompok
+  - Dasar pembagian tugas yang adil dan terukur
+  - Checklist pemenuhan materi kuliah (Minggu 2-14) yang wajib dibuktikan
+  - Bahan persiapan untuk sesi Oral Defense dan Live Modification saat sidang
+
+
+1.2 RUANG LINGKUP PROYEK
+--------------------------------------------------------------------------------
+Sistem Reservasi Ruangan versi UAS ini mencakup:
+
+  a) Registrasi dan login pengguna dengan password hashing (bcrypt)
+  b) Autentikasi berbasis JWT (Bearer Token via Authorization Header)
+  c) Dua peran pengguna: ADMIN dan USER
+  d) CRUD data ruangan (oleh Admin)
+  e) Proses pengajuan, persetujuan, dan pembatalan reservasi ruangan
+  f) Notifikasi in-app sederhana (tanpa email)
+  g) Dashboard ringkas sesuai peran
+  h) Frontend SPA menggunakan Svelte dengan client-side routing
+  i) Backend RESTful API menggunakan Express.js dengan arsitektur berlapis
+  j) Database relasional MariaDB dengan Drizzle ORM
+
+Yang TIDAK termasuk dalam ruang lingkup versi UAS ini:
+  - Pembayaran/transaksi keuangan
+  - Notifikasi email/SMTP, WhatsApp, atau SMS
+  - Single Sign-On (SSO) atau OTP dua faktor
+  - Reservasi berulang (recurring booking)
+  - Fitur check-in/check-out fisik
+  - Laporan analitik lanjutan (heatmap, prediksi, dsb.)
+  - Peran "Staff" terpisah dari Admin
+
+
+1.3 DEFINISI, AKRONIM, DAN SINGKATAN
+--------------------------------------------------------------------------------
+Istilah          Definisi
+-----------      ---------------------------------------------------------------
+SRS              Software Requirements Specification
+SPA              Single Page Application
+JWT              JSON Web Token, digunakan untuk autentikasi stateless
+Bearer Token     Skema autentikasi HTTP, token dikirim di header:
+                 Authorization: Bearer <token>
+bcrypt           Algoritma hashing satu arah untuk mengamankan password
+ORM              Object Relational Mapping (di proyek ini: Drizzle ORM)
+CRUD             Create, Read, Update, Delete
+CORS             Cross-Origin Resource Sharing
+Reservasi        Proses pengajuan pemakaian ruangan pada waktu tertentu
+Admin            Pengguna dengan akses penuh: kelola ruangan, setujui reservasi
+User             Pengguna umum yang mengajukan reservasi ruangan
+Middleware       Fungsi perantara di Express.js yang dijalankan sebelum handler
+                 utama (digunakan untuk autentikasi & otorisasi)
+Endpoint         Alamat URL API yang dapat diakses oleh frontend
+
+
+1.4 GAMBARAN UMUM DOKUMEN
+--------------------------------------------------------------------------------
+Dokumen ini disusun agar setiap bab dapat langsung dipakai sebagai bahan kerja:
+Bab 3 berisi pemetaan ke materi kuliah (untuk memastikan tidak ada poin rubrik
+yang terlewat), Bab 4 berisi pembagian tugas konkret, Bab 8-9 langsung dapat
+dijadikan acuan koding skema database dan API, dan Bab 14 khusus disiapkan
+untuk simulasi sesi Live Modification saat sidang.
+
+
+================================================================================
+BAB 2 — DESKRIPSI UMUM SISTEM
+================================================================================
+
+2.1 PERSPEKTIF PRODUK
+--------------------------------------------------------------------------------
+Sistem berupa aplikasi web fullstack dengan pemisahan jelas antara:
+
+  - Frontend: Svelte SPA (berjalan di browser, melakukan fetch ke backend)
+  - Backend: Express.js RESTful API (menangani logika bisnis dan akses database)
+  - Database: MariaDB (diakses backend melalui Drizzle ORM)
+
+Frontend dan backend berjalan sebagai dua proyek terpisah (dua port berbeda saat
+development), dihubungkan melalui HTTP request dengan format JSON, dan
+dikonfigurasi CORS agar frontend dapat mengakses backend dengan aman.
+
+
+2.2 FUNGSI UTAMA PRODUK
+--------------------------------------------------------------------------------
+  F-01  Registrasi dan login pengguna (dengan password hashing)
+  F-02  Autentikasi dan otorisasi berbasis JWT dan role (Admin/User)
+  F-03  Pengelolaan data ruangan (tambah, lihat, ubah, hapus) — khusus Admin
+  F-04  Pencarian ruangan tersedia berdasarkan tanggal dan jam
+  F-05  Pengajuan reservasi ruangan oleh User
+  F-06  Persetujuan/penolakan reservasi oleh Admin
+  F-07  Pembatalan reservasi oleh User (pemilik) atau Admin
+  F-08  Notifikasi in-app atas perubahan status reservasi
+  F-09  Dashboard ringkas berbeda untuk Admin dan User
+
+
+2.3 KARAKTERISTIK PENGGUNA (2 PERAN)
+--------------------------------------------------------------------------------
+
+[A] ADMIN
+    Deskripsi     : Pengelola sistem, biasanya petugas/pengelola gedung
+    Jumlah akun   : Minimal 1 akun (dibuat lewat seeder database)
+    Akses         :
+      - Mengelola seluruh data ruangan (CRUD)
+      - Melihat seluruh reservasi dari semua user
+      - Menyetujui atau menolak reservasi yang berstatus "pending"
+      - Membatalkan reservasi siapapun jika diperlukan
+      - Melihat dashboard ringkas sistem
+
+[B] USER
+    Deskripsi     : Pengguna umum (mahasiswa, dosen, staf, dll.)
+    Jumlah akun   : Tidak terbatas, dibuat melalui registrasi mandiri
+    Akses         :
+      - Mendaftar dan login ke sistem
+      - Mencari ruangan yang tersedia
+      - Mengajukan reservasi ruangan
+      - Melihat riwayat dan status reservasi miliknya sendiri
+      - Membatalkan reservasi miliknya sendiri (jika masih "pending")
+      - Melihat notifikasi terkait reservasinya
+
+
+2.4 ASUMSI DAN BATASAN PROYEK
+--------------------------------------------------------------------------------
+  a) Proyek dikerjakan oleh 2 orang dalam jangka waktu satu periode UAS
+  b) Akun Admin pertama dibuat melalui seed data, tidak ada fitur "daftar
+     sebagai admin" melalui form registrasi publik
+  c) Tidak ada pembatasan jumlah ruangan atau jumlah reservasi yang signifikan
+     mengingat skala proyek kecil (cukup untuk demo)
+  d) Database yang digunakan adalah MariaDB, diakses melalui Drizzle ORM
+  e) Validasi data dilakukan baik di sisi frontend (UX) maupun backend (wajib,
+     untuk keamanan)
+  f) Karena waktu terbatas, dokumentasi README dan video demo harus disiapkan
+     sejak awal pengerjaan, bukan di akhir
+
+
+================================================================================
+BAB 3 — PEMETAAN MODUL KE MATERI KULIAH (WAJIB DIPENUHI)
+================================================================================
+
+Tabel berikut memastikan setiap materi kuliah Minggu 2-14 terbukti diimplementasi
+secara konkret di proyek. Gunakan tabel ini sebagai CHECKLIST sebelum submit.
+
++----+---------------------------+------------------------------------------+--------+
+| No | Materi Kuliah             | Implementasi Konkret di Proyek            | Status |
++----+---------------------------+------------------------------------------+--------+
+| 1  | HTML5 Semantik            | Layout pakai <header><nav><main>          | [ ]    |
+|    |                           | <section><article><footer> di semua       |        |
+|    |                           | halaman utama (Dashboard, Daftar Ruangan, |        |
+|    |                           | Form Reservasi)                           |        |
++----+---------------------------+------------------------------------------+--------+
+| 2  | CSS Flexbox & Grid        | Flexbox: navbar, card ruangan, form       | [ ]    |
+|    | (tanpa framework CSS)     | Grid: grid daftar ruangan (responsive     |        |
+|    |                           | grid-template-columns dengan auto-fit)    |        |
++----+---------------------------+------------------------------------------+--------+
+| 3  | Responsive / Mobile-First | Breakpoint mobile (<768px), tablet,       | [ ]    |
+|    |                           | desktop diuji di DevTools                 |        |
++----+---------------------------+------------------------------------------+--------+
+| 4  | Animasi/Transisi CSS      | Hover pada card ruangan & tombol,         | [ ]    |
+|    |                           | transisi modal konfirmasi, loading        |        |
+|    |                           | spinner saat fetch data                   |        |
++----+---------------------------+------------------------------------------+--------+
+| 5  | Manipulasi DOM            | Update UI reaktif Svelte saat status      | [ ]    |
+|    |                           | reservasi berubah tanpa reload halaman    |        |
++----+---------------------------+------------------------------------------+--------+
+| 6  | Fetch API (async/await)   | Semua komunikasi FE-BE pakai fetch()      | [ ]    |
+|    |                           | dengan async/await, format JSON           |        |
++----+---------------------------+------------------------------------------+--------+
+| 7  | Local/Session Storage     | Simpan JWT token di localStorage,         | [ ]    |
+|    |                           | simpan preferensi tema (opsional)         |        |
++----+---------------------------+------------------------------------------+--------+
+| 8  | RESTful API Express.js   | Endpoint mengikuti konvensi REST          | [ ]    |
+|    |                           | (lihat Bab 9)                             |        |
++----+---------------------------+------------------------------------------+--------+
+| 9  | Arsitektur Router-        | Folder routes/, controllers/, models/     | [ ]    |
+|    | Controller-Model          | terpisah rapi (lihat Bab 7.2)             |        |
++----+---------------------------+------------------------------------------+--------+
+| 10 | Database Relasional +    | MariaDB + Drizzle ORM, relasi             | [ ]    |
+|    | ORM dengan relasi data    | One-to-Many (users→reservations,          |        |
+|    |                           | rooms→reservations)                       |        |
++----+---------------------------+------------------------------------------+--------+
+| 11 | Registrasi & Login Aman  | Form register & login, validasi input     | [ ]    |
++----+---------------------------+------------------------------------------+--------+
+| 12 | Password Hashing (bcrypt)| Password di-hash sebelum simpan ke DB,    | [ ]    |
+|    |                           | dibandingkan dengan bcrypt.compare()      |        |
++----+---------------------------+------------------------------------------+--------+
+| 13 | JWT via Authorization    | Token dikirim di header:                  | [ ]    |
+|    | Header (Bearer Token)    | Authorization: Bearer <token>             |        |
++----+---------------------------+------------------------------------------+--------+
+| 14 | Middleware Autentikasi   | Middleware verifyToken & verifyAdmin      | [ ]    |
+|    |                           | memproteksi endpoint sensitif             |        |
++----+---------------------------+------------------------------------------+--------+
+| 15 | Komponen Svelte Modular  | Komponen: RoomCard, ReservationForm,       | [ ]    |
+|    |                           | NavBar, Modal, StatusBadge, dll.          |        |
++----+---------------------------+------------------------------------------+--------+
+| 16 | State Management Svelte  | State lokal (let, $state) + Svelte Store  | [ ]    |
+|    | (lokal & store/global)   | global untuk data user login & notifikasi |        |
++----+---------------------------+------------------------------------------+--------+
+| 17 | Client-Side Routing (SPA)| svelte-routing atau SvelteKit/Routify     | [ ]    |
+|    |                           | untuk navigasi tanpa reload               |        |
++----+---------------------------+------------------------------------------+--------+
+| 18 | CORS pada Express        | Konfigurasi cors() middleware dengan      | [ ]    |
+|    |                           | origin spesifik ke alamat frontend        |        |
++----+---------------------------+------------------------------------------+--------+
+
+Catatan: Centang [✓] setiap baris setelah fitur tersebut selesai diimplementasi
+dan diuji. Tabel ini sebaiknya dilampirkan juga di README.md sebagai bukti
+self-assessment kelompok.
+
+
+================================================================================
+BAB 4 — PEMBAGIAN TUGAS ANTAR ANGGOTA (2 ORANG)
+================================================================================
+
+4.1 SKEMA PEMBAGIAN TUGAS
+--------------------------------------------------------------------------------
+Karena kelompok hanya 2 orang, pembagian dilakukan berdasarkan domain
+(bukan murni frontend vs backend) agar masing-masing anggota memahami penuh
+satu alur fitur dari ujung ke ujung — ini PENTING untuk Oral Defense, karena
+penguji akan menanyakan baris kode spesifik milik masing-masing orang.
+
+ANGGOTA A — "Pemilik Modul Autentikasi & Manajemen Ruangan"
+  Backend:
+    - Setup project Express.js, struktur folder, koneksi Drizzle ORM ke MariaDB
+    - Skema tabel: users, rooms
+    - Endpoint: register, login, CRUD ruangan
+    - Middleware: verifyToken, verifyAdmin
+    - Implementasi bcrypt untuk hashing password
+    - Implementasi JWT generation & verification
+  Frontend:
+    - Halaman Login & Register
+    - Halaman Daftar Ruangan (grid CSS Grid) & Detail Ruangan
+    - Halaman Manajemen Ruangan (Admin): tambah/edit/hapus ruangan
+    - Svelte Store untuk menyimpan data user yang login (authStore)
+
+ANGGOTA B — "Pemilik Modul Reservasi & Notifikasi"
+  Backend:
+    - Skema tabel: reservations, notifications
+    - Endpoint: ajukan reservasi, lihat reservasi, setujui/tolak, batalkan
+    - Logika validasi bisnis: cek bentrok jadwal, validasi waktu
+    - Endpoint notifikasi in-app
+  Frontend:
+    - Form Pengajuan Reservasi
+    - Halaman Riwayat Reservasi (User) & Manajemen Reservasi (Admin)
+    - Dashboard (ringkasan berbeda Admin/User)
+    - Komponen Notifikasi (lonceng + daftar notifikasi)
+
+TUGAS BERSAMA (dikerjakan berdua / pair programming):
+    - Konfigurasi CORS dan integrasi end-to-end frontend-backend
+    - Routing SPA (client-side routing) keseluruhan aplikasi
+    - Styling global, animasi/transisi CSS, responsivitas
+    - Penulisan README.md, dokumentasi API, dan .env.example
+    - Rekaman video demo
+
+
+4.2 RENCANA COMMIT GIT
+--------------------------------------------------------------------------------
+Sesuai kebijakan anti-vibecoding, minimal 5 commit bermakna per anggota,
+bertahap (bukan bulk commit di akhir). Contoh rencana commit:
+
+ANGGOTA A:
+  1. "feat: setup express project structure & db connection"
+  2. "feat: implement users schema & register/login endpoint"
+  3. "feat: add bcrypt password hashing"
+  4. "feat: implement JWT auth middleware (verifyToken, verifyAdmin)"
+  5. "feat: implement rooms CRUD endpoint"
+  6. "feat: build login & register page in svelte"
+  7. "feat: build room list page with CSS grid"
+  8. "style: add responsive layout & hover transitions for room cards"
+
+ANGGOTA B:
+  1. "feat: implement reservations schema with relations"
+  2. "feat: add reservation submission endpoint with conflict validation"
+  3. "feat: add approve/reject reservation endpoint"
+  4. "feat: implement notifications schema & endpoint"
+  5. "feat: build reservation form component in svelte"
+  6. "feat: build admin reservation management page"
+  7. "feat: build user dashboard with reservation history"
+  8. "style: add loading spinner & modal transition"
+
+Setiap commit WAJIB dilakukan dari akun GitHub pribadi masing-masing anggota,
+dan disarankan menyertakan pesan commit yang jelas (gunakan konvensi seperti
+feat:, fix:, style:, docs: di awal pesan).
+
+
+================================================================================
+BAB 5 — KEBUTUHAN FUNGSIONAL
+================================================================================
+
+Notasi: FR-XX = Functional Requirement, [WAJIB] = harus ada untuk lulus rubrik
+penilaian "Fungsionalitas Fullstack & DB" (20%)
+
+--------------------------------------------------------------------------------
+5.1 MODUL AUTENTIKASI & OTORISASI
+--------------------------------------------------------------------------------
+FR-01 [WAJIB] Registrasi Akun (User)
+      - Form input: nama, email, password, konfirmasi password
+      - Validasi: email unik, password minimal 6 karakter
+      - Password di-hash dengan bcrypt sebelum disimpan ke tabel users
+      - Role default saat registrasi mandiri adalah "user"
+
+FR-02 [WAJIB] Login
+      - Form input: email, password
+      - Backend memverifikasi password dengan bcrypt.compare()
+      - Jika valid, backend membuat JWT berisi payload {id, role}
+      - Token dikembalikan ke frontend dan disimpan di localStorage
+      - Frontend menyertakan token di header Authorization pada setiap
+        request ke endpoint yang terproteksi
+
+FR-03 [WAJIB] Middleware Autentikasi (verifyToken)
+      - Membaca header Authorization: Bearer <token>
+      - Memverifikasi keabsahan token (jwt.verify)
+      - Jika tidak valid/tidak ada, kembalikan 401 Unauthorized
+      - Jika valid, lanjutkan ke handler dan sisipkan data user di req.user
+
+FR-04 [WAJIB] Middleware Otorisasi (verifyAdmin)
+      - Mengecek req.user.role setelah verifyToken
+      - Jika role bukan "admin", kembalikan 403 Forbidden
+      - Diterapkan pada endpoint khusus admin (kelola ruangan, approve
+        reservasi siapapun)
+
+FR-05 [WAJIB] Logout
+      - Frontend menghapus token dari localStorage
+      - Redirect ke halaman login
+
+
+--------------------------------------------------------------------------------
+5.2 MODUL DASHBOARD
+--------------------------------------------------------------------------------
+FR-06 [WAJIB] Dashboard Admin
+      - Jumlah total ruangan
+      - Jumlah reservasi berstatus "pending" (perlu ditindak)
+      - Daftar ringkas reservasi terbaru
+
+FR-07 [WAJIB] Dashboard User
+      - Daftar reservasi milik sendiri yang akan datang
+      - Status reservasi terakhir yang diajukan
+      - Tombol cepat "Ajukan Reservasi Baru"
+
+
+--------------------------------------------------------------------------------
+5.3 MODUL MANAJEMEN RUANGAN (Khusus Admin)
+--------------------------------------------------------------------------------
+FR-08 [WAJIB] Tambah Ruangan
+      Field: nama ruangan, lokasi, kapasitas, deskripsi, jam_buka, jam_tutup
+      Endpoint terproteksi middleware verifyAdmin
+
+FR-09 [WAJIB] Lihat Daftar Ruangan
+      - Dapat diakses oleh Admin dan User (publik setelah login)
+      - Ditampilkan dalam grid (CSS Grid) berisi nama, kapasitas, status
+
+FR-10 [WAJIB] Edit Ruangan
+      Admin dapat mengubah seluruh data ruangan
+
+FR-11 [WAJIB] Hapus Ruangan
+      - Hanya dapat dilakukan jika tidak ada reservasi aktif terkait ruangan
+      - Tampilkan dialog konfirmasi sebelum hapus
+
+
+--------------------------------------------------------------------------------
+5.4 MODUL RESERVASI
+--------------------------------------------------------------------------------
+FR-12 [WAJIB] Ajukan Reservasi (User)
+      Field: room_id, tanggal, jam_mulai, jam_selesai, keperluan
+      Validasi backend:
+        - Ruangan tidak sedang dipesan pada slot waktu yang sama
+          (cek overlap waktu dengan query database)
+        - jam_mulai < jam_selesai
+        - tanggal tidak boleh di masa lampau
+      Status awal: "pending"
+
+FR-13 [WAJIB] Lihat Reservasi Milik Sendiri (User)
+      - User hanya dapat melihat reservasi miliknya (filter berdasarkan
+        req.user.id dari token, bukan dari input client)
+
+FR-14 [WAJIB] Lihat Semua Reservasi (Admin)
+      - Admin dapat melihat seluruh reservasi dari semua user
+      - Filter berdasarkan status: pending / approved / rejected / cancelled
+
+FR-15 [WAJIB] Setujui / Tolak Reservasi (Admin)
+      - Admin dapat mengubah status "pending" menjadi "approved" atau
+        "rejected"
+      - Saat menolak, admin mengisi alasan penolakan (field opsional)
+      - Sistem membuat notifikasi in-app untuk user pemilik reservasi
+
+FR-16 [WAJIB] Batalkan Reservasi
+      - User dapat membatalkan reservasi miliknya sendiri jika statusnya
+        masih "pending" atau "approved"
+      - Admin dapat membatalkan reservasi siapapun
+      - Status berubah menjadi "cancelled"
+
+
+--------------------------------------------------------------------------------
+5.5 MODUL NOTIFIKASI (IN-APP)
+--------------------------------------------------------------------------------
+FR-17 [WAJIB] Buat Notifikasi Otomatis
+      Sistem membuat baris baru di tabel notifications saat:
+        - Reservasi disetujui → notifikasi ke user
+        - Reservasi ditolak → notifikasi ke user (beserta alasan)
+        - Reservasi baru diajukan → notifikasi ke semua admin (opsional,
+          bisa disederhanakan jadi badge counter di dashboard admin)
+
+FR-18 [WAJIB] Lihat Notifikasi
+      - Ikon lonceng di navbar menampilkan jumlah notifikasi belum dibaca
+      - Klik menampilkan daftar notifikasi terbaru milik user yang login
+
+
+--------------------------------------------------------------------------------
+5.6 MODUL MANAJEMEN PENGGUNA (Disederhanakan)
+--------------------------------------------------------------------------------
+FR-19 [OPSIONAL] Admin melihat daftar user terdaftar
+      Cukup tabel sederhana: nama, email, tanggal daftar. Tidak perlu fitur
+      edit/hapus user kompleks untuk versi UAS — fokuskan waktu ke modul
+      reservasi yang menjadi inti penilaian.
+
+
+================================================================================
+BAB 6 — KEBUTUHAN NON-FUNGSIONAL
+================================================================================
+
+NFR-01  Password tidak boleh disimpan dalam bentuk plain text di database
+        (wajib di-hash dengan bcrypt, minimal 10 salt rounds)
+NFR-02  Token JWT memiliki masa berlaku (expiry), disarankan 24 jam untuk
+        kemudahan testing/demo
+NFR-03  Seluruh endpoint yang mengubah data (POST/PUT/DELETE) pada resource
+        sensitif harus melalui middleware verifyToken
+NFR-04  Validasi input dilakukan di backend (tidak hanya mengandalkan validasi
+        HTML/frontend), karena ini yang dinilai saat live modification
+NFR-05  Aplikasi frontend harus responsif minimal pada 3 ukuran: mobile
+        (< 768px), tablet (768-1024px), desktop (> 1024px)
+NFR-06  Setiap proses fetch API harus memiliki state loading dan error yang
+        ditampilkan ke pengguna (tidak boleh "diam" tanpa feedback)
+NFR-07  Kode backend wajib dipisah dalam folder routes/, controllers/,
+        models atau db/ (schema Drizzle), tidak boleh seluruh logika
+        ditumpuk dalam satu file index.js
+NFR-08  Kode frontend wajib dipecah menjadi komponen Svelte yang reusable,
+        tidak boleh seluruh UI berada dalam satu file App.svelte
+
+
+================================================================================
+BAB 7 — ARSITEKTUR SISTEM
+================================================================================
+
+7.1 ARSITEKTUR UMUM
+--------------------------------------------------------------------------------
+
+  [ Browser ]
+       |
+       |  HTTP Request (fetch, JSON, header Authorization: Bearer <token>)
+       v
+  [ Svelte SPA - Frontend (port 5173) ]
+       |
+       |  CORS-enabled fetch ke backend
+       v
+  [ Express.js REST API - Backend (port 3000) ]
+       |
+       |  Query via Drizzle ORM
+       v
+  [ MariaDB Database ]
+
+
+7.2 STRUKTUR FOLDER BACKEND (EXPRESS.JS)
+--------------------------------------------------------------------------------
+  backend/
+  ├── src/
+  │   ├── db/
+  │   │   ├── schema.js          (definisi tabel Drizzle ORM)
+  │   │   └── index.js           (koneksi database)
+  │   ├── routes/
+  │   │   ├── auth.routes.js
+  │   │   ├── room.routes.js
+  │   │   ├── reservation.routes.js
+  │   │   └── notification.routes.js
+  │   ├── controllers/
+  │   │   ├── auth.controller.js
+  │   │   ├── room.controller.js
+  │   │   ├── reservation.controller.js
+  │   │   └── notification.controller.js
+  │   ├── middlewares/
+  │   │   ├── verifyToken.js
+  │   │   └── verifyAdmin.js
+  │   ├── utils/
+  │   │   └── hash.js            (helper bcrypt)
+  │   └── app.js                 (setup express, cors, routes)
+  ├── .env.example
+  ├── package.json
+  └── server.js                  (entry point)
+
+
+7.3 STRUKTUR FOLDER FRONTEND (SVELTE)
+--------------------------------------------------------------------------------
+  frontend/
+  ├── src/
+  │   ├── components/
+  │   │   ├── NavBar.svelte
+  │   │   ├── RoomCard.svelte
+  │   │   ├── ReservationForm.svelte
+  │   │   ├── StatusBadge.svelte
+  │   │   ├── Modal.svelte
+  │   │   └── NotificationBell.svelte
+  │   ├── pages/
+  │   │   ├── Login.svelte
+  │   │   ├── Register.svelte
+  │   │   ├── Dashboard.svelte
+  │   │   ├── RoomList.svelte
+  │   │   ├── RoomManagement.svelte
+  │   │   ├── ReservationHistory.svelte
+  │   │   └── ReservationManagement.svelte
+  │   ├── stores/
+  │   │   ├── authStore.js       (data user login & token)
+  │   │   └── notificationStore.js
+  │   ├── lib/
+  │   │   └── api.js             (wrapper fetch API)
+  │   ├── App.svelte             (routing utama)
+  │   └── main.js
+  ├── .env.example
+  └── package.json
+
+
+7.4 ALUR AUTENTIKASI JWT (BEARER TOKEN)
+--------------------------------------------------------------------------------
+  1. User login → backend verifikasi password → backend generate JWT
+     (jwt.sign({id, role}, SECRET, {expiresIn: '24h'}))
+  2. Backend mengembalikan { token, user: {id, name, email, role} }
+  3. Frontend menyimpan token di localStorage
+  4. Setiap request ke endpoint terproteksi, frontend menambahkan header:
+        Authorization: Bearer <token>
+  5. Middleware verifyToken di backend membaca header, memverifikasi dengan
+     jwt.verify(), lalu menyisipkan payload ke req.user
+  6. Jika endpoint khusus admin, middleware verifyAdmin mengecek req.user.role
+  7. Jika token tidak ada/invalid/expired → backend mengembalikan 401
+  8. Jika role tidak sesuai → backend mengembalikan 403
+  9. Frontend menangkap status 401 secara global (di wrapper api.js) dan
+     otomatis redirect ke halaman login jika sesi tidak valid
+
+
+7.5 PENANGANAN CORS
+--------------------------------------------------------------------------------
+  - Backend mengaktifkan middleware cors() dari package "cors"
+  - Konfigurasi origin diarahkan secara spesifik ke alamat frontend
+    (contoh: origin: 'http://localhost:5173'), TIDAK menggunakan origin: '*'
+    pada endpoint yang memerlukan kredensial
+  - Method yang diizinkan: GET, POST, PUT, DELETE
+  - Header yang diizinkan: Content-Type, Authorization
+
+
+================================================================================
+BAB 8 — MODEL DATA (DATABASE)
+================================================================================
+
+8.1 ENTITY RELATIONSHIP DIAGRAM (ERD - TEKS)
+--------------------------------------------------------------------------------
+
+  USERS (1) ────────< (N) RESERVATIONS
+  ROOMS (1) ────────< (N) RESERVATIONS
+  USERS (1) ────────< (N) NOTIFICATIONS
+
+  Relasi:
+    - Satu USER dapat memiliki banyak RESERVATIONS  (One-to-Many)
+    - Satu ROOM dapat memiliki banyak RESERVATIONS  (One-to-Many)
+    - Satu USER dapat memiliki banyak NOTIFICATIONS  (One-to-Many)
+
+
+8.2 SKEMA TABEL LENGKAP (UNTUK DRIZZLE ORM)
+--------------------------------------------------------------------------------
+
+[TABEL: users]
+  id            INT, PK, AUTO_INCREMENT
+  name          VARCHAR(100), NOT NULL
+  email         VARCHAR(150), UNIQUE, NOT NULL
+  password      VARCHAR(255), NOT NULL        -- hasil bcrypt hash
+  role          ENUM('admin', 'user'), DEFAULT 'user'
+  created_at    TIMESTAMP, DEFAULT CURRENT_TIMESTAMP
+
+[TABEL: rooms]
+  id            INT, PK, AUTO_INCREMENT
+  name          VARCHAR(150), NOT NULL, UNIQUE
+  location      VARCHAR(200)
+  capacity      INT, NOT NULL
+  description   TEXT
+  open_time     TIME, NOT NULL, DEFAULT '08:00:00'
+  close_time    TIME, NOT NULL, DEFAULT '17:00:00'
+  created_at    TIMESTAMP, DEFAULT CURRENT_TIMESTAMP
+
+[TABEL: reservations]
+  id            INT, PK, AUTO_INCREMENT
+  user_id       INT, FK → users.id, NOT NULL
+  room_id       INT, FK → rooms.id, NOT NULL
+  date          DATE, NOT NULL
+  start_time    TIME, NOT NULL
+  end_time      TIME, NOT NULL
+  purpose       VARCHAR(255), NOT NULL        -- keperluan reservasi
+  status        ENUM('pending','approved','rejected','cancelled'),
+                DEFAULT 'pending'
+  reject_reason VARCHAR(255), NULL
+  created_at    TIMESTAMP, DEFAULT CURRENT_TIMESTAMP
+
+[TABEL: notifications]
+  id            INT, PK, AUTO_INCREMENT
+  user_id       INT, FK → users.id, NOT NULL
+  message       VARCHAR(255), NOT NULL
+  is_read       BOOLEAN, DEFAULT false
+  created_at    TIMESTAMP, DEFAULT CURRENT_TIMESTAMP
+
+Contoh definisi skema Drizzle ORM (gambaran, sesuaikan dengan dialect MariaDB):
+
+  export const users = mysqlTable('users', {
+    id: int('id').autoincrement().primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    email: varchar('email', { length: 150 }).notNull().unique(),
+    password: varchar('password', { length: 255 }).notNull(),
+    role: mysqlEnum('role', ['admin', 'user']).default('user'),
+    createdAt: timestamp('created_at').defaultNow(),
+  });
+
+  export const reservations = mysqlTable('reservations', {
+    id: int('id').autoincrement().primaryKey(),
+    userId: int('user_id').notNull().references(() => users.id),
+    roomId: int('room_id').notNull().references(() => rooms.id),
+    date: date('date').notNull(),
+    startTime: time('start_time').notNull(),
+    endTime: time('end_time').notNull(),
+    purpose: varchar('purpose', { length: 255 }).notNull(),
+    status: mysqlEnum('status',
+      ['pending','approved','rejected','cancelled']).default('pending'),
+    rejectReason: varchar('reject_reason', { length: 255 }),
+    createdAt: timestamp('created_at').defaultNow(),
+  });
+
+  -- Query pengecekan bentrok jadwal (logika inti FR-12):
+  -- Cari reservasi di room yang sama, tanggal sama, status bukan
+  -- 'rejected'/'cancelled', dan rentang waktu saling overlap:
+  --   (start_time < :end_time) AND (end_time > :start_time)
+
+
+================================================================================
+BAB 9 — DOKUMENTASI API ENDPOINT
+================================================================================
+
+Catatan format: Body = payload request, Auth = perlu header Authorization,
+Role = peran yang diizinkan mengakses endpoint.
+
+--------------------------------------------------------------------------------
+9.1 ENDPOINT AUTENTIKASI
+--------------------------------------------------------------------------------
+
+POST   /api/auth/register
+  Auth   : Tidak perlu
+  Body   : { "name": string, "email": string, "password": string }
+  Respon : 201 { "message": "Registrasi berhasil", "user": {...} }
+
+POST   /api/auth/login
+  Auth   : Tidak perlu
+  Body   : { "email": string, "password": string }
+  Respon : 200 { "token": "<jwt>", "user": { "id", "name", "email", "role" } }
+  Error  : 401 { "message": "Email atau password salah" }
+
+GET    /api/auth/me
+  Auth   : Bearer Token
+  Respon : 200 { "id", "name", "email", "role" }
+  Error  : 401 { "message": "Token tidak valid" }
+
+
+--------------------------------------------------------------------------------
+9.2 ENDPOINT RUANGAN
+--------------------------------------------------------------------------------
+
+GET    /api/rooms
+  Auth   : Bearer Token (semua role)
+  Query  : ?date=YYYY-MM-DD&start=HH:mm&end=HH:mm  (opsional, untuk filter
+           ruangan tersedia pada slot waktu tertentu)
+  Respon : 200 [ { "id", "name", "location", "capacity", ... } ]
+
+GET    /api/rooms/:id
+  Auth   : Bearer Token
+  Respon : 200 { "id", "name", "location", "capacity", "description", ... }
+  Error  : 404 { "message": "Ruangan tidak ditemukan" }
+
+POST   /api/rooms
+  Auth   : Bearer Token, Role: admin
+  Body   : { "name", "location", "capacity", "description",
+             "open_time", "close_time" }
+  Respon : 201 { "message": "Ruangan berhasil ditambahkan", "room": {...} }
+
+PUT    /api/rooms/:id
+  Auth   : Bearer Token, Role: admin
+  Body   : { field yang ingin diubah }
+  Respon : 200 { "message": "Ruangan berhasil diperbarui" }
+
+DELETE /api/rooms/:id
+  Auth   : Bearer Token, Role: admin
+  Respon : 200 { "message": "Ruangan berhasil dihapus" }
+  Error  : 400 { "message": "Ruangan masih memiliki reservasi aktif" }
+
+
+--------------------------------------------------------------------------------
+9.3 ENDPOINT RESERVASI
+--------------------------------------------------------------------------------
+
+POST   /api/reservations
+  Auth   : Bearer Token (role: user/admin)
+  Body   : { "room_id", "date", "start_time", "end_time", "purpose" }
+  Respon : 201 { "message": "Reservasi berhasil diajukan", "reservation": {...} }
+  Error  : 409 { "message": "Ruangan sudah dipesan pada waktu tersebut" }
+           400 { "message": "Waktu tidak valid" }
+
+GET    /api/reservations/me
+  Auth   : Bearer Token
+  Respon : 200 [ { "id", "room", "date", "start_time", "end_time", "status" } ]
+  Catatan: backend WAJIB memfilter berdasarkan req.user.id dari token, bukan
+           dari parameter yang dikirim client (mencegah user melihat data
+           milik orang lain)
+
+GET    /api/reservations
+  Auth   : Bearer Token, Role: admin
+  Query  : ?status=pending|approved|rejected|cancelled
+  Respon : 200 [ { "id", "user", "room", "date", "status", ... } ]
+
+PATCH  /api/reservations/:id/approve
+  Auth   : Bearer Token, Role: admin
+  Respon : 200 { "message": "Reservasi disetujui" }
+
+PATCH  /api/reservations/:id/reject
+  Auth   : Bearer Token, Role: admin
+  Body   : { "reject_reason": string }
+  Respon : 200 { "message": "Reservasi ditolak" }
+
+PATCH  /api/reservations/:id/cancel
+  Auth   : Bearer Token (pemilik reservasi atau admin)
+  Respon : 200 { "message": "Reservasi dibatalkan" }
+  Error  : 403 { "message": "Tidak diizinkan membatalkan reservasi ini" }
+
+
+--------------------------------------------------------------------------------
+9.4 ENDPOINT PENGGUNA
+--------------------------------------------------------------------------------
+
+GET    /api/users
+  Auth   : Bearer Token, Role: admin
+  Respon : 200 [ { "id", "name", "email", "role", "created_at" } ]
+  (Opsional, lihat FR-19)
+
+
+--------------------------------------------------------------------------------
+9.5 ENDPOINT NOTIFIKASI
+--------------------------------------------------------------------------------
+
+GET    /api/notifications
+  Auth   : Bearer Token
+  Respon : 200 [ { "id", "message", "is_read", "created_at" } ]
+  Catatan: hanya mengembalikan notifikasi milik req.user.id
+
+PATCH  /api/notifications/:id/read
+  Auth   : Bearer Token
+  Respon : 200 { "message": "Notifikasi ditandai sudah dibaca" }
+
+
+--------------------------------------------------------------------------------
+9.6 FORMAT RESPONS STANDAR & ERROR HANDLING
+--------------------------------------------------------------------------------
+Respon sukses:
+  { "success": true, "message": "...", "data": { ... } }
+
+Respon error:
+  { "success": false, "message": "..." }
+
+Kode status HTTP yang digunakan secara konsisten:
+  200  OK (berhasil, GET/PUT/PATCH)
+  201  Created (berhasil, POST data baru)
+  400  Bad Request (validasi gagal)
+  401  Unauthorized (token tidak ada/invalid)
+  403  Forbidden (role tidak diizinkan)
+  404  Not Found (data tidak ditemukan)
+  409  Conflict (jadwal bentrok)
+  500  Internal Server Error
+
+Catatan untuk Live Modification: penguji kemungkinan akan meminta perubahan
+format respons error (misal menambah field "errorCode"), jadi pastikan logika
+error handling terpusat di satu tempat (middleware error handler), bukan
+ditulis berulang di setiap controller, supaya mudah diubah saat sidang.
+
+
+================================================================================
+BAB 10 — KEBUTUHAN ANTARMUKA (UI/UX)
+================================================================================
+
+10.1 DAFTAR HALAMAN & KOMPONEN SVELTE
+--------------------------------------------------------------------------------
+Halaman (routing):
+  /login                    → Login.svelte
+  /register                 → Register.svelte
+  /dashboard                → Dashboard.svelte (tampilan beda Admin/User)
+  /rooms                    → RoomList.svelte
+  /rooms/manage             → RoomManagement.svelte (khusus admin)
+  /reservations             → ReservationHistory.svelte (user) atau
+                               ReservationManagement.svelte (admin)
+
+Komponen reusable:
+  NavBar.svelte             → navigasi + NotificationBell + tombol logout
+  RoomCard.svelte           → kartu ruangan (digunakan di grid RoomList)
+  ReservationForm.svelte    → form pengajuan reservasi (modal atau halaman)
+  StatusBadge.svelte        → label warna status (pending/approved/dst.)
+  Modal.svelte              → komponen modal generik (konfirmasi, form)
+  NotificationBell.svelte   → ikon lonceng + dropdown daftar notifikasi
+
+
+10.2 KETENTUAN RESPONSIF (FLEXBOX & GRID)
+--------------------------------------------------------------------------------
+  - NavBar menggunakan Flexbox (justify-content: space-between)
+  - Grid daftar ruangan menggunakan CSS Grid:
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  - Form menggunakan Flexbox column untuk susunan vertikal field
+  - Breakpoint minimal: mobile (<768px) navbar berubah jadi hamburger/stack,
+    grid ruangan menjadi 1 kolom
+
+
+10.3 KETENTUAN ANIMASI/TRANSISI CSS
+--------------------------------------------------------------------------------
+  - Hover pada RoomCard: transform: scale(1.02) dengan transition 0.2s
+  - Modal: transisi fade-in/fade-out (opacity + transform translateY)
+  - Tombol: transisi warna background saat hover/active
+  - Loading state saat fetch API: tampilkan spinner sederhana (CSS animasi
+    @keyframes rotate) sebelum data tampil
+
+
+================================================================================
+BAB 11 — ATURAN BISNIS
+================================================================================
+
+BR-01  Reservasi baru selalu dimulai dengan status "pending"
+BR-02  Ruangan tidak boleh memiliki dua reservasi yang waktunya tumpang
+       tindih (overlap) dengan status bukan "rejected"/"cancelled"
+BR-03  User hanya dapat membatalkan reservasi miliknya sendiri, dan hanya
+       jika statusnya "pending" atau "approved"
+BR-04  Hanya Admin yang dapat menyetujui/menolak reservasi
+BR-05  Penolakan reservasi disarankan menyertakan alasan (reject_reason)
+       agar User memahami penyebabnya
+BR-06  Ruangan tidak dapat dihapus apabila masih memiliki reservasi dengan
+       status "pending" atau "approved" yang belum lewat tanggalnya
+BR-07  Email pengguna harus unik di seluruh sistem
+BR-08  Password minimal 6 karakter (disesuaikan kebutuhan demo, dapat
+       ditingkatkan menjadi 8 karakter + kombinasi huruf-angka)
+BR-09  Role "admin" tidak dapat didaftarkan melalui form registrasi publik;
+       hanya dibuat melalui seed data atau diubah manual di database
+
+
+================================================================================
+BAB 12 — MATRIKS HAK AKSES
+================================================================================
+
++--------------------------------------------+---------+--------+
+| FITUR / AKSI                                | ADMIN   | USER   |
++--------------------------------------------+---------+--------+
+| Register & Login                            |  [Y]    |  [Y]   |
+| Lihat daftar ruangan                        |  [Y]    |  [Y]   |
+| Tambah / edit / hapus ruangan                |  [Y]    |  [N]   |
+| Ajukan reservasi                             |  [Y]    |  [Y]   |
+| Lihat reservasi milik sendiri                |  [Y]    |  [Y]   |
+| Lihat semua reservasi (semua user)           |  [Y]    |  [N]   |
+| Setujui / tolak reservasi                    |  [Y]    |  [N]   |
+| Batalkan reservasi milik sendiri             |  [Y]    |  [Y]   |
+| Batalkan reservasi milik user lain           |  [Y]    |  [N]   |
+| Lihat notifikasi milik sendiri               |  [Y]    |  [Y]   |
+| Lihat daftar semua user (opsional)           |  [Y]    |  [N]   |
++--------------------------------------------+---------+--------+
+
+
+================================================================================
+BAB 13 — SKENARIO PENGGUNAAN (USE CASE)
+================================================================================
+
+UC-01  MENGAJUKAN RESERVASI
+  Aktor       : User
+  Alur Normal :
+    1. User login, lalu membuka halaman "Daftar Ruangan"
+    2. User memilih ruangan, klik "Ajukan Reservasi"
+    3. User mengisi tanggal, jam mulai, jam selesai, dan keperluan
+    4. Sistem mengirim POST /api/reservations
+    5. Backend memvalidasi tidak ada bentrok jadwal
+    6. Jika valid, data tersimpan dengan status "pending"
+    7. Frontend menampilkan pesan sukses dan reservasi muncul di riwayat
+  Alur Alternatif:
+    5a. Jika bentrok, backend mengembalikan 409, frontend menampilkan pesan
+        error "Ruangan sudah dipesan pada waktu tersebut"
+
+UC-02  MENYETUJUI / MENOLAK RESERVASI
+  Aktor       : Admin
+  Alur Normal :
+    1. Admin login, membuka halaman "Manajemen Reservasi"
+    2. Admin melihat daftar reservasi status "pending"
+    3. Admin klik "Setujui" → PATCH /api/reservations/:id/approve
+    4. Status berubah "approved", notifikasi dibuat untuk user terkait
+  Alur Alternatif:
+    3a. Admin klik "Tolak" → mengisi alasan → PATCH .../reject
+        Status berubah "rejected", notifikasi dibuat berisi alasan
+
+UC-03  MEMBATALKAN RESERVASI
+  Aktor       : User (pemilik) atau Admin
+  Alur Normal :
+    1. User membuka "Riwayat Reservasi", memilih reservasi miliknya
+    2. User klik "Batalkan" (hanya muncul jika status pending/approved)
+    3. Sistem konfirmasi, lalu PATCH /api/reservations/:id/cancel
+    4. Backend memverifikasi req.user.id sama dengan user_id reservasi
+       (atau req.user.role === 'admin')
+    5. Status berubah "cancelled"
+
+
+================================================================================
+BAB 14 — RENCANA ANTISIPASI LIVE MODIFICATION
+================================================================================
+
+Bagian ini disiapkan khusus untuk mengantisipasi sesi Live Modification (bobot
+20% nilai individu) yang harus diselesaikan 5-10 menit TANPA bantuan AI.
+Pastikan SETIAP anggota memahami semua poin ini, bukan hanya bagian masing-
+masing, karena penguji bisa meminta siapapun memodifikasi bagian manapun.
+
+14.1 CONTOH SKENARIO MODIFIKASI FRONTEND
+--------------------------------------------------------------------------------
+  a) "Ubah validasi form agar field 'keperluan' tidak menerima karakter
+      angka di awal kalimat"
+     → Latihan: tambahkan regex check di handler submit ReservationForm.svelte
+       sebelum fetch dikirim
+
+  b) "Ubah layout RoomCard dari Flexbox menjadi CSS Grid"
+     → Latihan: pahami betul struktur CSS yang ditulis sendiri, jangan hanya
+       copy dari tutorial tanpa paham display: flex vs display: grid
+
+  c) "Tambahkan validasi agar tanggal reservasi tidak boleh hari Minggu"
+     → Latihan: pahami cara membaca objek Date di JavaScript (getDay())
+
+  d) "Ubah pesan error 'Ruangan sudah dipesan' menjadi bahasa Inggris"
+     → Latihan: pastikan tahu persis di file mana string tersebut berada
+
+
+14.2 CONTOH SKENARIO MODIFIKASI BACKEND
+--------------------------------------------------------------------------------
+  a) "Tambahkan field validasi baru: kapasitas ruangan tidak boleh negatif
+      atau nol"
+     → Latihan: tambahkan pengecekan di room.controller.js sebelum data
+       disimpan, kembalikan 400 jika tidak valid
+
+  b) "Ubah format respons error agar menyertakan field 'errorCode'"
+     → Latihan: pahami struktur error handler terpusat, edit di satu tempat
+
+  c) "Tambahkan middleware baru yang membatasi user membuat maksimal 3
+      reservasi pending dalam waktu bersamaan"
+     → Latihan: pahami cara menulis query count dengan Drizzle ORM dan
+       menyisipkan middleware baru ke route tertentu
+
+  d) "Ubah masa berlaku token JWT dari 24 jam menjadi 1 jam"
+     → Latihan: tahu persis baris kode jwt.sign() berada di file mana
+
+
+14.3 CHECKLIST PEMAHAMAN KODE SEBELUM SIDANG
+--------------------------------------------------------------------------------
+  [ ] Saya bisa menjelaskan alur lengkap dari klik tombol di frontend sampai
+      data tersimpan di database, tanpa melihat catatan
+  [ ] Saya tahu persis di baris mana password di-hash dan di mana di-verifikasi
+  [ ] Saya tahu persis bagaimana JWT dibuat, dikirim, dan diverifikasi
+  [ ] Saya bisa menjelaskan query Drizzle ORM yang mendeteksi bentrok jadwal
+  [ ] Saya bisa menjelaskan kenapa middleware verifyAdmin diletakkan di
+      urutan tertentu pada route
+  [ ] Saya bisa menjelaskan struktur Svelte Store yang dipakai dan kenapa
+      tidak menggunakan props biasa untuk data tersebut
+  [ ] Saya sudah mencoba sendiri (tanpa rekan) memodifikasi minimal 2 fitur
+      kecil di kode sendiri sebagai simulasi
+
+
+================================================================================
+BAB 15 — CHECKLIST KELENGKAPAN PENGUMPULAN UAS
+================================================================================
+
+  [ ] Repositori GitHub bersifat PUBLIK
+  [ ] Struktur folder /frontend dan /backend terpisah jelas (atau dua repo
+      bertautan di README)
+  [ ] Minimal 5 commit bermakna per anggota, dari akun masing-masing,
+      bertahap (bukan bulk commit di akhir)
+  [ ] File README.md berisi:
+        - Judul proyek & deskripsi masalah yang diselesaikan
+        - Tabel anggota kelompok & pembagian tugas (lihat Bab 4.1)
+        - ERD / daftar tabel database (lihat Bab 8)
+        - Dokumentasi ringkas endpoint API (lihat Bab 9)
+        - Cara menjalankan aplikasi secara lokal (langkah instalasi,
+          environment variable, cara menjalankan migrasi Drizzle)
+  [ ] File .env.example untuk frontend dan backend (tanpa credential asli)
+  [ ] Video demo maksimal 5 menit menunjukkan: register, login, ajukan
+      reservasi, approve/reject oleh admin, logout
+  [ ] Seluruh anggota sudah berlatih Oral Defense dan Live Modification
+      (lihat checklist Bab 14.3)
+  [ ] Checklist pemetaan materi kuliah di Bab 3.1 sudah tercentang semua
+
+
+================================================================================
+BAB 16 — RIWAYAT DOKUMEN
+================================================================================
+
++----------+----------+-------------------+----------------------------------+
+| Versi    | Tanggal  | Penulis           | Keterangan                       |
++----------+----------+-------------------+----------------------------------+
+| 1.0      | 2024     | Kelompok (2 org)  | Versi UAS - disesuaikan dengan   |
+|          |          |                   | panduan UAS Pemrograman Web      |
+|          |          |                   | (Svelte + Express + MariaDB)     |
++----------+----------+-------------------+----------------------------------+
+
+================================================================================
+        AKHIR DOKUMEN — SRS SISTEM RESERVASI RUANGAN (VERSI UAS) v1.0
+================================================================================
